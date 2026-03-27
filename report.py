@@ -4,27 +4,24 @@ import csv
 import argparse
 from collections import defaultdict
 
+def to_int(value):
+    return int(value.replace(",", "").strip())
+
+def to_float(value):
+    return float(value.replace(",", "").strip())
+
 def read_team_map(filename):
     teams = {}
 
     with open(filename, newline="", encoding="utf-8-sig") as f:
         reader = csv.reader(f)
+        header = [h.strip().replace("\ufeff", "").rstrip(",") for h in next(reader)]
 
-        # Read and clean header
-        raw_header = next(reader)
-        header = [h.strip() for h in raw_header]
-
-        # Normalize header names (extra safety)
-        header = [h.replace("\ufeff", "") for h in header]
-
-        try:
-            team_id_idx = header.index("TeamId")
-            name_idx = header.index("Name")
-        except ValueError:
-            raise ValueError(f"Unexpected TeamMap.csv header: {header}")
+        team_id_idx = header.index("TeamId")
+        name_idx = header.index("Name")
 
         for row in reader:
-            team_id = int(row[team_id_idx].strip().rstrip(","))
+            team_id = to_int(row[team_id_idx])
             team_name = row[name_idx].strip()
             teams[team_id] = team_name
 
@@ -32,30 +29,36 @@ def read_team_map(filename):
 
 def read_product_master(filename):
     products = {}
-    with open(filename, newline="", encoding="utf-8") as f:
+
+    with open(filename, newline="", encoding="utf-8-sig") as f:
         reader = csv.reader(f)
+
         for row in reader:
-            product_id = int(row[0])
+            product_id = to_int(row[0])
             products[product_id] = {
-                "name": row[1],
-                "price": float(row[2]),
-                "lot_size": int(row[3])
+                "name": row[1].strip(),
+                "price": to_float(row[2]),
+                "lot_size": to_int(row[3])
             }
+
     return products
 
 
 def read_sales(filename):
     sales = []
-    with open(filename, newline="", encoding="utf-8") as f:
+
+    with open(filename, newline="", encoding="utf-8-sig") as f:
         reader = csv.reader(f)
+
         for row in reader:
             sales.append({
-                "sale_id": int(row[0]),
-                "product_id": int(row[1]),
-                "team_id": int(row[2]),
-                "quantity": int(row[3]),
-                "discount": float(row[4])
+                "sale_id": to_int(row[0]),
+                "product_id": to_int(row[1]),
+                "team_id": to_int(row[2]),
+                "quantity": to_int(row[3]),
+                "discount": to_float(row[4])
             })
+
     return sales
 
 
