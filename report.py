@@ -4,19 +4,29 @@ import csv
 import argparse
 from collections import defaultdict
 
+
+# -------------------------
+# Helper conversion functions
+# -------------------------
 def to_int(value):
     return int(value.replace(",", "").strip())
+
 
 def to_float(value):
     return float(value.replace(",", "").strip())
 
+
+# -------------------------
+# Read TeamMap.csv
+# -------------------------
 def read_team_map(filename):
     teams = {}
 
     with open(filename, newline="", encoding="utf-8-sig") as f:
         reader = csv.reader(f)
-        header = [h.strip().replace("\ufeff", "").rstrip(",") for h in next(reader)]
 
+        # Read and clean header
+        header = [h.strip().replace("\ufeff", "").rstrip(",") for h in next(reader)]
         team_id_idx = header.index("TeamId")
         name_idx = header.index("Name")
 
@@ -27,6 +37,10 @@ def read_team_map(filename):
 
     return teams
 
+
+# -------------------------
+# Read ProductMaster.csv
+# -------------------------
 def read_product_master(filename):
     products = {}
 
@@ -44,6 +58,9 @@ def read_product_master(filename):
     return products
 
 
+# -------------------------
+# Read Sales.csv
+# -------------------------
 def read_sales(filename):
     sales = []
 
@@ -62,6 +79,9 @@ def read_sales(filename):
     return sales
 
 
+# -------------------------
+# Generate reports
+# -------------------------
 def generate_reports(team_map, products, sales,
                      team_report_file, product_report_file):
 
@@ -73,6 +93,7 @@ def generate_reports(team_map, products, sales,
         "discount_cost": 0.0
     })
 
+    # Aggregate sales
     for sale in sales:
         product = products[sale["product_id"]]
         team_name = team_map.get(sale["team_id"], "Unknown")
@@ -89,20 +110,26 @@ def generate_reports(team_map, products, sales,
         stats["units"] += units_sold
         stats["discount_cost"] += discount_cost
 
-    # ---- Team Report ----
-    sorted_teams = sorted(
-        team_revenue.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )
+    # -------------------------
+    # Write TeamReport.csv
+    # -------------------------
+    sorted_teams = sorted(team_revenue.items(), key=lambda x: x[1], reverse=True)
 
     with open(team_report_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["Team", "GrossRevenue"])
-        for team, revenue in sorted_teams:
-            writer.writerow([team, f"{revenue:.2f}"])
 
-    # ---- Product Report ----
+        # Headers WITH commas
+        writer.writerow(["Team,", "GrossRevenue,"])
+
+        for team_name, revenue in sorted_teams:
+            writer.writerow([
+                f"{team_name},",
+                f"{revenue:,.2f}"
+            ])
+
+    # -------------------------
+    # Write ProductReport.csv
+    # -------------------------
     sorted_products = sorted(
         product_stats.values(),
         key=lambda x: x["gross"],
@@ -111,16 +138,27 @@ def generate_reports(team_map, products, sales,
 
     with open(product_report_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["Name", "GrossRevenue", "TotalUnits", "DiscountCost"])
+
+        # Headers (commas only where requested)
+        writer.writerow([
+            "Name,",
+            "GrossRevenue,",
+            "TotalUnits,",
+            "DiscountCost"
+        ])
+
         for p in sorted_products:
             writer.writerow([
                 p["name"],
-                f"{p['gross']:.2f}",
-                p["units"],
-                f"{p['discount_cost']:.2f}"
+                f"{p['gross']:,.2f},",   # trailing comma
+                f"{p['units']:,},",      # trailing comma
+                f"{p['discount_cost']:,.2f}"
             ])
 
 
+# -------------------------
+# Main entry point
+# -------------------------
 def main():
     parser = argparse.ArgumentParser(description="Sales Reporting Tool")
 
